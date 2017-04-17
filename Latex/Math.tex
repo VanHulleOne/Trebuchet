@@ -5,6 +5,8 @@
 \usepackage{amssymb}
 \usepackage{tikz}
 \usetikzlibrary{shapes, positioning, decorations.text}
+\usepackage{wrapfig}
+
 \begin{document}
 \title{Trebuchet}
 	\section{Optimum Release Angle}
@@ -21,7 +23,7 @@
 			\draw[->,ultra thick] (0,0)--(10,0) node[right]{$x$};
 			\draw[->,ultra thick] (0,0)--(0,5) node[above]{$y$};
 			\node[cross out, draw] at (8,0) {};
-			\draw[->, thick] (0,0) -- (2,3) node[pos=0.6, above, sloped] (TextNode) {Initial Velocity};
+			\draw[->, thick] (0,0) -- (2,3) node[midway, above, sloped] (TextNode) {$V$};
 			\draw (2,0) arc (0:56:2) node[pos=0.4, above] (TextNode) {\large{$\theta$}};
 			\node at (8,-0.4) {$R$};
 		\end{tikzpicture}
@@ -29,5 +31,31 @@
 		\label{fig:launchAngle}
 		\end{figure}
 		
+	\subsection{Breakup $V$ into its  X and Y Components}
+		The first step is to break up our initial velocity vector $V$ into its two component vectors $V_x$ and $V_y$.
+		This will tell us how fast our projectile is moving in these two directions.
+		
+		\begin{wrapfigure}{l}{0.45\textwidth}
+		\begin{tikzpicture}
+			\draw[->, thick] (0,0)--(4,0) node[below, midway] {$V_x$};
+			\draw[->, thick] (4,0)--(4,3.9) node[right, midway] {$V_y$};
+			\draw[->, thick] (0,0)--(4,4) node[left, midway] {$V$};
+			\draw (1.5,0) arc (0:45:1.5) node[midway, right] {$\theta$};
+		\end{tikzpicture}
+		\caption{Component Vectors of $V$.}
+		\label{fig:componentVectors}
+		\end{wrapfigure}
+		
+		\noindent
+		$V =$ launch velocity \\
+		$\theta =$ launch angle \\
+		$V_x =$ velocity in the $x$ direction \\
+		$V_y =$ velocity in the $y$ direction \\
+		
+		How do we find the values of $V_x$ and $V_y$?
+		Since we know that $V_x$ and $V_y$ form a right angle we can use the basic trig identities for $\sin, \cos, \tan$ to find the these values knowing only $V$ and $\theta$.
+		
+		$V_x = V \sin\theta$ \\
+		$V_y = V \cos\theta$ \\
 		
 \end{document}
