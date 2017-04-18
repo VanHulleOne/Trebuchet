@@ -93,10 +93,14 @@
 		  + \frac{1}{2}
 		  \underbrace{-9.8		\rule[-3pt]{0pt}{5pt}}_{\mbox{gravity $m/s^2$}}
 		  t^2  \]
+		Please note that we are going to use metric units for gravity so all of our other units must be metric.
+		Also, we have chosen to set "up" as positive y. 
+		With this frame of reference gravity is pulling everything down, or accelerating objects down, so we need the negative sign. 
 		This provides us with a quadratic equation which contains just one unknown value $t$.
 		For equations with the form:
 		\begin{equation}
 			ax^2 + bx + c = 0
+			\label{eq:quadratic}
 		\end{equation}
 		we can use the quadratic formula to solve for $x$.
 		The quadratic formula is:
@@ -104,8 +108,76 @@
 			x = \frac{-b \pm \sqrt{b^2 - 4ac} }{2a}
 			\label{eq:quadraticFormula}
 		\end{equation}
+		Rearranging our equation of motion to fit the form seen in equation \ref{eq:quadratic} we get:
+		\[ \frac{1}{2}(-9.8)t^2 + V_yt + 0 = 0 \]
+		where $a = \frac{1}{2}(-9.8) = -4.9, b = V_y,$ and $c = 0$.
+		Substituting these values into the quadratic formula, eq. \ref{eq:quadraticFormula}:
+		\[
+			t = \frac{^- V_y \pm \sqrt{V_y^2 - 4 \times {^- 4.9} \times 0}}{2 \times \frac{1}{2} \times {^- 9.8}}
+		\]
+		Following through with the math:
+		\[
+			t = \frac{^- V_y \pm \sqrt{V_y^2}}{-9.8} = \frac{^- V_y \pm V_y}{-9.8}
+		\]
+		Now the $\pm$ means there are two possible solutions to our problem.
+		If we look at the $+$ solution we see $-V_y + V_y$ in the numerator which equals 0.
+		So we have a solution at $t=0$.
+		What does this mean and does this make sense?
+		Where is the projectile at $t=0$?
+		$t_0$ is our start time and we said we are starting at $y=0$ so this makes sense and is a good check that our math is at least heading in the right direction.
 		
+		Taking a look at the minus solution we find:
+		\[ t = \frac{^- V_y - V_y}{-9.8} = \frac{-2V_y}{-9.8}\]
+		cancel out our negative signs and we arrive at our solution:
+		\begin{equation}
+			t = \frac{2V_y}{9.8}
+			\label{eq:hangTime}
+		\end{equation}
+		This gives us our relation between our initial velocity in the y direction and how long the projectile will be in the air.
+		The result is a positive number which makes sense since we are expecting the projectile to hit the ground some time after we have launched it and is proportional to the initial velocity, the faster we launch our object the longer it will stay in the air, and inversely proportional to the pull of gravity, if we were on a planet with stronger gravity it would stay in the air a shorter amount of time.
 		
-		 
+		Sanity check complete, now we will move on to the X direction and finally start calculating our range.
+		
+	\subsubsection{Range}
+		Although you may already know that velocity $\times$ time $=$ distance, we will start with our equation of motion, eq \ref{eq:posEquation}, to ensure we have the correct answer and show how it all ties together. Substituting our $V_x$ values in for eq \ref{eq:posEquation} we get:
+		\[ R = S = 0 + V_xt + \frac{1}{2}(0)t^2 \]
+		Our initial position is again zero but this time our acceleration is also zero.
+		An acceleration of zero in the X direction means nothing is slowing down the projectile in the forwards direction.
+		Does this make sense?
+		What about wind resistance?
+		Doesn't that slow a projectile down?
+		The answer is yes, and if we were going to account for wind resistance, also known as drag, it would be a negative acceleration placed in the last term.
+		However, including drag makes the math much more difficult because it is not constant like gravity.
+		Instead drag is a function of velocity which means it changes as the speed of our projectile changes.
+		The faster our projectile is moving forward the more the wind pushes back.
+		A typical drag formula is as follows:
+		\[ F_d = \frac{1}{2}\rho v C_D A\]
+		Where: \\
+		$F_d =$ Drag force \\
+		$\rho =$ Density of air \\
+		$v =$ velocity, the part that will change with time \\
+		$C_D =$ coefficient of drag, a number which can also change with velocity \\
+		$A = $ cross sectional area \\
+		Although accounting for wind resistance is not easy, we would also have to do it in the Y direction, it is not impossible.
+		In fact with computers solving this problem is not necessary, we can instead choose small time steps where we assume the acceleration is constant and then after each time step, calculate the new velocity and then the new acceleration, and repeat.
+		A task which can be done in Excel or with a simple WHILE/FOR loop in any programming language.
+		
+		Following through on our math for our range equation we find:
+		\[ R = V_xt \]
+		Our range is just our initial velocity $\times$ time, just as we expected.
+		What is our time?
+		That is eq \ref{eq:hangTime} from our Y calculations.
+		Substituting in for $t$ we get:
+		\[ R = V_x\left(\frac{2V_y}{9.8}\right) \]
+		Now we can substitute in for $V_x$ and $V_y$ the values which relate them to our initial velocity and launch angle from eq \ref{eq:componentVectors}.
+		\[ R = V\cos\theta \times V\sin\theta \times \frac{2}{9.8} \]
+		Moving the constants out front we get:
+		\begin{equation}
+			R = \frac{2}{9.8} V^2 \cos(\theta) \sin(\theta)
+			\label{eq:range}
+		\end{equation}
+		Now we need to find when this value is the maximum.
+		
+	\subsubsection{Maximum Range}
 		
 \end{document}
