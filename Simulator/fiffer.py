@@ -117,10 +117,17 @@ class Simulator:
         
         LM.form_lagranges_equations()
         print('Solve for acc')
-        vel = LM.rhs()
-        Ycdd = sym.diff(vel[1],t)
+        acc = LM.rhs()
+        Ycdd = acc[1]
         print('Solved')
         for key, value in locals().items():
+            if key == 'thSdd' or key == 'slingTensionY':
+                ycdd = sym.diff(Yc,t,t)
+                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'l_a', 'l_s')
+                tD = [Yc, Ycd, ycdd, thS, thSd]
+                self.ground_functions[key] = lambdify_helper(tD, value, n)
+                self.ground_symbolicEquations[key] = value
+                continue
             try:                
                 self.ground_functions[key] = lambdify_helper(timeDependent, value, names)
                 self.ground_symbolicEquations[key] = value
@@ -243,14 +250,18 @@ class Simulator:
             th = ths[-1]
             thd = thsd[-1]
             ycdd = functions['Ycdd'](y, yd, th, thd, la, ls)
-            thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
+            if switched:
+                thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
+            else:
+                thsdd = functions['thSdd'](y, yd, ycdd, th, thd, la, ls)
             
-            slingTensionY = functions['slingTensionY'](y, yd, th, thd, la, ls)
-            armTipPosY = functions['armTipPosY'](y, yd, th, thd, la, ls)
-            if (not switched
-                and (slingTensionY > -constants['g']*constants['Mp']
-                or la + armTipPosY >= ls)):
-                functions = self.functions
+                slingTensionY = functions['slingTensionY'](y, yd, ycdd, th, thd, la, ls)
+                armTipPosY = functions['armTipPosY'](y, yd, th, thd, la, ls)
+                
+                if (slingTensionY > -constants[g]*constants[Mp]
+                    or la + armTipPosY >= ls):
+                    functions = self.functions
+                    switched = True
             
             yc.append(y + yd*dt + 0.5*ycdd*dt**2)
             ycd.append(yd + ycdd*dt)
