@@ -27,6 +27,7 @@ ax = fig.gca(projection='3d')
 X = np.arange(1.5, 5, 0.05)
 Y = np.arange(1.5, 7, 0.05)
 Z = np.zeros([len(X)*len(Y)])
+print('Total:', len(Z))
 
 i = 0
 for y in Y:
@@ -40,7 +41,7 @@ for y in Y:
 X, Y = np.meshgrid(X, Y)
 Z = Z.reshape(X.shape)
 
-xi, yi = np.unravel_index(Z.argmaz(), Z.shape)
+xi, yi = np.unravel_index(Z.argmax(), Z.shape)
 print('Arm:', X[xi,yi])
 print('Sling:', Y[xi,yi])
 print('Range:', Z[xi,yi])

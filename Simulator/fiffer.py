@@ -20,8 +20,8 @@ X, Y = 0, 1 # For matrix indexes
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_a l_s r_cam theta_Ai g space')
 
-la_init = 2.65
-ls_init = 4.2
+la_init = 2.73
+ls_init = 3.5
 
 constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1,
              theta_Ai:-sym.pi/2, g:-9.8, space:0.5}
@@ -36,7 +36,6 @@ timeDependent = [Yc, Ycd, thS, thSd]
 Yct, Ycdt, thSt, thSdt = sym.symbols('Yct, Ycdt, thSt, thSdt')
 dummy_timedependent = (Yct, Ycdt, thSt, thSdt)
 names = ('Yct', 'Ycdt', 'thSt', 'thSdt', 'l_a', 'l_s')
-
 
 timeSubsDict = {a:b for a,b in zip(timeDependent, dummy_timedependent)}
 
@@ -56,7 +55,11 @@ class Simulator:
         self.ground_symbolicEquations = {}
         self.ground_functions = {}
         self.distances = []
-        #self.createLagrangian()
+        self.createLagrangian()
+        self.createGroundLagrangian()
+        self.la = None
+        self.ls = None
+        self.endRange((la_init, ls_init))
         #self.printFuncs()
 
     def createGroundLagrangian(self):
@@ -222,13 +225,11 @@ class Simulator:
                 f.write('\n\n')
             f.write('end\n')
             f.write('end\n')
-#print('Start Loop')
-#
-
-#lengths_array = []
+            
+            
     def endRange(self, lengths):
-    #    print('la:', la, ' ls:', ls)
         la, ls = lengths
+        self.la, self.ls = lengths
         dt = 0.01
         end = constants[CWdrop]*(-0.96)
         maxSteps = 2000
@@ -262,6 +263,8 @@ class Simulator:
                     or la + armTipPosY >= ls):
                     functions = self.functions
                     switched = True
+                    self.projLiftIndex = i
+                    #print('Yc:', y)
             
             yc.append(y + yd*dt + 0.5*ycdd*dt**2)
             ycd.append(yd + ycdd*dt)
@@ -278,20 +281,45 @@ class Simulator:
         # 0 = g/2*t^2 + vi*t + xi
         hangTime = (-projVelY - (projVelY**2 - 4*5*-9.8/2)**0.5)/(-9.8)
         dist = -projVelX*hangTime
-#        print('dist:', dist, 'hangTime:', hangTime, 'la:', la, 'ls:', ls)
-        self.distances.append(dist)
+        self.Yc_array = np.array(yc)
+        self.Ycd_array = np.array(ycd)
+        self.thS_array = np.array(ths)
+        self.thSd_array = np.array(thsd)
+        self.time_array = np.array(time)
         return dist
+    
+
     
     def opti(self, la = la_init, ls = ls_init):
         res = optimize.minimize(self.endRange, [la, ls], method = 'TNC', bounds=((1,7),(1,10)), tol=0.01)
         print(res)
 
-#S1 = Simulator()
-
+def calcData(self):
+    length = len(self.time_array)
+    self.Vp = np.zeros(length)
+    self.Tp = np.zeros(length)
+    self.projPos = np.zeros((2, length))
+    self.T = np.zeros(length)
+    self.V = np.zeros(length)
+    firstSlice = slice(self.projLiftIndex)
+    secondSlice = slice(self.projLiftIndex, length)
+    
+    for _slice, funcs in zip((firstSlice, secondSlice),
+                             (self.ground_functions, self.functions)):
+        data = (self.Yc_array[_slice],
+            self.Ycd_array[_slice], 
+            self.thS_array[_slice], 
+            self.thSd_array[_slice], 
+            self.la, self.ls)
+        self.Vp[_slice] = funcs['V_p'](*data)
+        self.Tp[_slice] = funcs['T_p'](*data)
+        pos = funcs['projPos'](*data)
+        self.projPos[X,_slice] = pos[X]
+        self.projPos[Y,_slice] = pos[Y]
+        self.T[_slice] = funcs['T'](*data)
+        self.V[_slice] = funcs['V'](*data)
 
     
-#opti()
-
 def printFunc(func):
     func = func.subs({a:b for a,b in zip(timeDependent, dummy_timedependent)})
     func = func.subs(constants)
