@@ -20,12 +20,9 @@ from fiffer import Simulator
 
 S1 = Simulator()
 
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-
 # Make data.
-X = np.arange(1.5, 5, 0.05)
-Y = np.arange(1.5, 7, 0.05)
+X = np.arange(1.5, 5, 0.1)
+Y = np.arange(1.5, 7, 0.1)
 Z = np.zeros([len(X)*len(Y)])
 print('Total:', len(Z))
 
@@ -48,7 +45,8 @@ print('Range:', Z[xi,yi])
 #R = np.sqrt(X**2 + Y**2)
 #Z = np.sin(R)
 #Z = X*Y
-
+fig = plt.figure()
+ax = fig.gca(projection='3d')
 # Plot the surface.
 ax.plot_surface(X,Y,Z, cmap=cm.jet, rstride=2, cstride=2)
 
