@@ -20,10 +20,10 @@ X, Y = 0, 1 # For matrix indexes
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_a l_s r_cam theta_Ai g space')
 
-la_init = 2.73
-ls_init = 3.5
+la_init = 3.29
+ls_init = 3.61
 
-constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1,
+constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1.15,
              theta_Ai:-sym.pi/2, g:-9.8, space:0.5}
 
 Yc = sym.Function('Yc')(t)
@@ -299,6 +299,7 @@ def calcData(self):
     self.Vp = np.zeros(length)
     self.Tp = np.zeros(length)
     self.projPos = np.zeros((2, length))
+    self.armTipPos = np.zeros((2, length))
     self.T = np.zeros(length)
     self.V = np.zeros(length)
     firstSlice = slice(self.projLiftIndex)
@@ -316,6 +317,9 @@ def calcData(self):
         pos = funcs['projPos'](*data)
         self.projPos[X,_slice] = pos[X]
         self.projPos[Y,_slice] = pos[Y]
+        armPos = funcs['armTipPos'](*data)
+        self.armTipPos[X,_slice] = armPos[X]
+        self.armTipPos[Y,_slice] = armPos[Y]
         self.T[_slice] = funcs['T'](*data)
         self.V[_slice] = funcs['V'](*data)
 
