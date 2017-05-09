@@ -11,6 +11,7 @@ from sympy.physics import mechanics as mech
 from sympy.utilities.lambdify import lambdastr
 import numpy as np
 import matplotlib.pyplot as plt
+import testFuncs as tf
 
 from scipy import optimize
 
@@ -252,12 +253,15 @@ class Simulator:
             yd = ycd[-1]
             th = ths[-1]
             thd = thsd[-1]
-            ycdd = functions['Ycdd'](y, yd, th, thd, la, ls)
+            #ycdd = functions['Ycdd'](y, yd, th, thd, la, ls)
             if switched:
-                thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
+                ycdd = tf.ycdd(y, yd, th, thd, la, ls)
+                thsdd = tf.thSdd(y, yd, th, thd, la, ls)
+                #thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
             else:
+                ycdd = tf.g_ycdd(y, yd, th, thd, la, ls)
                 thsdd = functions['thSdd'](y, yd, ycdd, th, thd, la, ls)
-            
+                
                 slingTensionY = functions['slingTensionY'](y, yd, ycdd, th, thd, la, ls)
                 armTipPosY = functions['armTipPosY'](y, yd, th, thd, la, ls)
                 
