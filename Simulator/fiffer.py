@@ -66,7 +66,7 @@ class Simulator:
         print('Create Ground Lagrangian')
         
         Ma = Ma_perMeter*la
-        Ia = Ma*la/12
+        Ia = Ma*la**2/3
         
         Xcam = -CWdrop/2 - r_cam - space
         Ycam = r_cam - r_cam # To make a symbolic zero
@@ -187,7 +187,7 @@ class Simulator:
         
         L = T - V
         
-        LM = mech.LagrangesMethod(L, (Yc, thS))
+        LM = mech.LagrangesMethod(L, (Yc, thS))#, forcelist=[Ycd*0.1,])
         
         LM.form_lagranges_equations()
         print('Solve for acc')
@@ -208,11 +208,13 @@ class Simulator:
 #                print(e)
 #                break
 
-    def printFuncs(self):
+    def printFuncs(self, eq_Dict=None):
+        if eq_Dict is None:
+            eq_Dict = self.symbolicEquations
         with open('trebfunctions.m', 'w') as f:
             f.write('classdef trebfunctions \n')
             f.write('methods(Static) \n')
-            for key, value in self.symbolicEquations.items():
+            for key, value in eq_Dict.items():
                 if key == 'acc' or key == 'projVel' or key == 'projAcc':
                     continue
                 f.write('function [' + key + '] = ' + key + '(Yct, Ycdt, thSt, thSdt, l_a, l_s) \n')
@@ -230,7 +232,7 @@ class Simulator:
     def endRange(self, lengths):
         la, ls = lengths
         self.la, self.ls = lengths
-        dt = 0.01
+        dt = 0.001
         end = constants[CWdrop]*(-0.96)
         maxSteps = 2000
         
@@ -274,12 +276,29 @@ class Simulator:
             projVelX = functions['projVelX'](yc[-1], ycd[-1], ths[-1], thsd[-1], la, ls)
             projVelY = functions['projVelY'](yc[-1], ycd[-1], ths[-1], thsd[-1], la, ls)
             
-            if projVelY > 0 and projVelX > projVelY:
+            if projVelY > 0 and projVelX >= projVelY:
                 break
+        else: # Excecuted if the break statement is not hit.
+            '''
+            If the sling is too long it will not come around fast enough and the
+            while loop will exit because the CW has fallen all the way down. The
+            real machine would continue running and possibly pull the CW back up a
+            little before launching, but the simulation does not work that way so
+            this is an attempt to handle that and smooth out the contour plot so the
+            optimization can be more robust.
+            '''
+            cos45 = np.cos(np.pi/4)
+            ideal = np.array([cos45, cos45])
+            actual = np.array([projVelX, projVelY])
+            velMagnitude = np.linalg.norm(actual)
+            cosTheta = (np.dot(ideal, actual)/velMagnitude+1)/2
+            projVelX, projVelY = ideal*velMagnitude*cosTheta
+            #print('VelMag:', velMagnitude, ' CosTheta:', cosTheta)
+        
         
         # s = xi + vi*t + 1.2at^2
         # 0 = g/2*t^2 + vi*t + xi
-        hangTime = (-projVelY - (projVelY**2 - 4*5*-9.8/2)**0.5)/(-9.8)
+        hangTime = (-projVelY - (projVelY**2 - 4*1*-9.8/2)**0.5)/(-9.8)
         dist = -projVelX*hangTime
         self.Yc_array = np.array(yc)
         self.Ycd_array = np.array(ycd)
@@ -290,9 +309,10 @@ class Simulator:
     
 
     
-    def opti(self, la = la_init, ls = ls_init):
-        res = optimize.minimize(self.endRange, [la, ls], method = 'TNC', bounds=((1,7),(1,10)), tol=0.01)
-        print(res)
+def opti(self, la = la_init, ls = ls_init):
+    # 'Nelder-Mead' 'TNC' bounds=((1,7),(1,10)),
+    res = optimize.minimize(self.endRange, [la, ls], method = 'Nelder-Mead',  tol=1.0)
+    print(res)
 
 def calcData(self):
     length = len(self.time_array)

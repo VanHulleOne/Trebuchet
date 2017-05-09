@@ -38,7 +38,7 @@ def animate(i):
 anim = animation.FuncAnimation(fig, animate, 
                                init_func=init, 
                                frames=len(S1.time_array)*2, 
-                               interval=30,
+                               interval=3,
                                blit=True)
 #patch = plt.Circle((5, -5), 0.75, fc='y')
 #

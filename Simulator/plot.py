@@ -18,11 +18,11 @@ import numpy as np
 
 from fiffer import Simulator
 
-S1 = Simulator()
+#S1 = Simulator()
 
 # Make data.
-X = np.arange(1.5, 5, 0.1)
-Y = np.arange(1.5, 7, 0.1)
+X = np.arange(1.5, 5, 0.05)
+Y = np.arange(1.5, 7, 0.05)
 Z = np.zeros([len(X)*len(Y)])
 print('Total:', len(Z))
 
