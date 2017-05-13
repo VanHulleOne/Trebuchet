@@ -21,8 +21,8 @@ X, Y = 0, 1 # For matrix indexes
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_a l_s r_cam theta_Ai g space')
 
-la_init = 3.29
-ls_init = 3.61
+la_init = 2.9
+ls_init = 3.2
 
 constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1.15,
              theta_Ai:-sym.pi/2, g:-9.8, space:0.5}
@@ -229,7 +229,7 @@ class Simulator:
             f.write('end\n')
             f.write('end\n')
             
-            
+    #@profile        
     def endRange(self, lengths):
         la, ls = lengths
         self.la, self.ls = lengths
@@ -239,8 +239,10 @@ class Simulator:
         
         yc = [0]
         ycd = [0]
+        ycdd_list = []
         ths = [0]
         thsd = [0]
+        thsdd_list = []
         time = [0]
         
         functions = self.ground_functions
@@ -274,8 +276,11 @@ class Simulator:
             
             yc.append(y + yd*dt + 0.5*ycdd*dt**2)
             ycd.append(yd + ycdd*dt)
+            ycdd_list.append(ycdd)
+            
             ths.append(th + thd*dt + 0.5*thsdd*dt**2)
             thsd.append(thd + thsdd*dt)
+            thsdd_list.append(thsdd)
             
             projVelX = functions['projVelX'](yc[-1], ycd[-1], ths[-1], thsd[-1], la, ls)
             projVelY = functions['projVelY'](yc[-1], ycd[-1], ths[-1], thsd[-1], la, ls)
@@ -306,8 +311,10 @@ class Simulator:
         dist = -projVelX*hangTime
         self.Yc_array = np.array(yc)
         self.Ycd_array = np.array(ycd)
+        self.Ycdd_array = np.array(ycdd_list)
         self.thS_array = np.array(ths)
         self.thSd_array = np.array(thsd)
+        self.thSdd_array = np.array(thsdd_list)
         self.time_array = np.array(time)
         return dist
     
@@ -354,6 +361,9 @@ def printFunc(func):
     funcStr = lambdastr(dummy_timedependent, func)
     funcStr = funcStr.replace('**', '^')
     print(funcStr)
+    
+S1 = Simulator()
+#S1.endRange((2.9,3.2))
 #Xp_func = sym.lambdify((Yc, thS),Xproj.subs(constants), 'numpy')
 #Yp_func = sym.lambdify((Yc, thS),Yproj.subs(constants), 'numpy')
 #
