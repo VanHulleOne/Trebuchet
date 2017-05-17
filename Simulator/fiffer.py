@@ -142,7 +142,7 @@ class Simulator:
         print('Create Lagrangian')
         
         Ma = Ma_perMeter*la
-        Ia = Ma*la/12
+        Ia = Ma*la**2/3
         
         Xcam = -CWdrop/2 - r_cam - space
         Ycam = r_cam - r_cam # To make a symbolic zero
