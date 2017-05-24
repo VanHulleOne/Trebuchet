@@ -12,6 +12,7 @@ from sympy.utilities.lambdify import lambdastr
 import numpy as np
 import matplotlib.pyplot as plt
 import testFuncs as tf
+from collections import namedtuple
 
 from scipy import optimize
 
@@ -19,7 +20,7 @@ sym.init_printing()
 
 X, Y = 0, 1 # For matrix indexes
 
-t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_a l_s r_cam theta_Ai g space')
+t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
 la_init = 2.9
 ls_init = 3.2
@@ -30,15 +31,26 @@ constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1.15,
 Yc = sym.Function('Yc')(t)
 thS = sym.Function('theta_S')(t)
 Ycd = sym.diff(Yc, t)
+Ycdd = sym.diff(Yc,t,t)
 thSd = sym.diff(thS, t)
+thSdd = sym.diff(thS,t,t)
 
-timeDependent = [Yc, Ycd, thS, thSd]
+timeDependent = [Yc, Ycd, Ycdd, thS, thSd, thSdd]
+timeIndepArgs = (la, ls)
 
-Yct, Ycdt, thSt, thSdt = sym.symbols('Yct, Ycdt, thSt, thSdt')
-dummy_timedependent = (Yct, Ycdt, thSt, thSdt)
+Yct, Ycdt, Ycddt, thSt, thSdt, thSddt = sym.symbols('Yct, Ycdt, Ycddt, thSt, thSdt, thSddt')
+dummy_timedependent = (Yct, Ycdt, Ycddt, thSt, thSdt, thSddt)
 names = ('Yct', 'Ycdt', 'thSt', 'thSdt', 'l_a', 'l_s')
 
 timeSubsDict = {a:b for a,b in zip(timeDependent, dummy_timedependent)}
+
+def makeJIT(func):
+    func = func.subs(timeSubsDict)
+    funcSet = set(sym.preorder_traversal(func))
+    args = [arg for arg in dummy_timedependent + timeIndepArgs if arg in funcSet]
+    func = func.subs(constants)
+    return str(func)
+        
 
 def lambdify_helper(variables, func, names=None, subConsts=True):
     if names is None:
@@ -59,84 +71,7 @@ class Simulator:
         self.createLagrangian()
         self.createGroundLagrangian()
         self.la = None
-        self.ls = None
-#        self.endRange((la_init, ls_init))
-        #self.printFuncs()
-
-#    def createGroundLagrangian(self):
-#        print('Create Ground Lagrangian')
-#        
-#        Ma = Ma_perMeter*la
-#        Ia = Ma*la**2/3
-#        
-#        Xcam = -CWdrop/2 - r_cam - space
-#        Ycam = r_cam - r_cam # To make a symbolic zero
-#        
-#        Xpb = -CWdrop/2 + Yc**2/4
-#        Ypb = Yc/2
-#        
-#        theta_arm = theta_Ai - (sym.sqrt((Xcam - Xpb)**2 + (Ycam - Ypb)**2) - r_cam - space)/r_cam
-#        
-#        armTipPos = la*sym.Matrix([sym.cos(theta_arm), sym.sin(theta_arm)])
-#        armTipPosX = armTipPos[X]
-#        armTipPosY = armTipPos[Y]
-#        
-#        thS = -sym.asin(la*(1+sym.sin(theta_arm))/ls)
-#        thSd = sym.diff(thS,t)
-#        thSdd = sym.diff(thS,t,t)
-#        
-#        Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
-#        Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
-#        
-#        projPos = sym.Matrix([Xproj, Yproj])
-#        
-#        projVel = projPos.diff(t)
-#        projVelX = projVel[X]
-#        projVelY = projVel[Y]
-#        projAcc = projPos.diff(t, t)
-#        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
-#        slingTensionY = -slingTension*sym.sin(thS)
-#        projSpeedSq = projVel[0]**2 + projVel[1]**2
-#        
-#        """
-#        L = T-V
-#        where:
-#        T = Kenetic Energy
-#        V = Potential Energy
-#        """
-#        
-#        V_c = Mc*-g*(Yc+CWdrop)
-#        V_armcg = Ma*-g*armTipPos[Y]/2
-#        V_p = Mp*-g*Yproj
-#        V = V_c+V_armcg+V_p
-#        
-#        T_c = Mc*Ycd**2/2
-#        T_a = Ia*sym.diff(theta_arm,t)**2/2
-#        T_p = Mp*projSpeedSq/2
-#        T = T_c+T_a+T_p
-#        
-#        L = T - V
-#        
-#        LM = mech.LagrangesMethod(L, (Yc,))
-#        
-#        LM.form_lagranges_equations()
-#        print('Solve for acc')
-#        acc = LM.rhs()
-#        Ycdd = acc[1]
-#        print('Solved')
-#        for key, value in locals().items():
-#            if key == 'thSdd' or key == 'slingTensionY':
-#                ycdd = sym.diff(Yc,t,t)
-#                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'l_a', 'l_s')
-#                tD = [Yc, Ycd, ycdd, thS, thSd]
-#                self.ground_functions[key] = lambdify_helper(tD, value, n)
-#                self.ground_symbolicEquations[key] = value
-#                continue
-#            try:                
-#                self.ground_functions[key] = lambdify_helper(timeDependent, value, names)
-#                self.ground_symbolicEquations[key] = value
-#            except Exception as e:
-#                print('Key:', key)        
+        self.ls = None      
 
     def createGroundLagrangian(self):
         print('Create Ground Lagrangian')
@@ -188,20 +123,16 @@ class Simulator:
         
         L = T - V
         
-        LM = mech.LagrangesMethod(L, (Yc, thS), hol_coneqs=[Yproj])#, forcelist=[Ycd*0.1,])
+        LM = mech.LagrangesMethod(L, (Yc, thS), hol_coneqs=[Yproj])
         
         LM.form_lagranges_equations()
         print('Solve for acc')
         acc = LM.rhs()
         Ycdd = acc[2]
         thSdd = acc[3]
-#        self.symbolicEquations['Ycdd'] = acc[2]
-#        self.symbolicEquations['thSdd'] = acc[3]
-#        self.functions['Ycdd'] = lambdify_helper(timeDependent, acc[2], names)
-#        self.functions['thSdd'] = lambdify_helper(timeDependent, acc[3], names)
         print('Solved')
         for key, value in locals().items():
-            if key == 'slingTensionY':
+            if key == 'slingTensionY' or key == 'projAcc':
                 ycdd = sym.diff(Yc,t,t)
                 thSdd = sym.diff(thS,t,t)
                 n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'thSddt', 'l_a', 'l_s')
@@ -265,17 +196,13 @@ class Simulator:
         
         L = T - V
         
-        LM = mech.LagrangesMethod(L, (Yc, thS))#, forcelist=[Ycd*0.1,])
+        LM = mech.LagrangesMethod(L, (Yc, thS))
         
         LM.form_lagranges_equations()
         print('Solve for acc')
         acc = LM.rhs()
         Ycdd = acc[2]
         thSdd = acc[3]
-#        self.symbolicEquations['Ycdd'] = acc[2]
-#        self.symbolicEquations['thSdd'] = acc[3]
-#        self.functions['Ycdd'] = lambdify_helper(timeDependent, acc[2], names)
-#        self.functions['thSdd'] = lambdify_helper(timeDependent, acc[3], names)
         print('Solved')
         for key, value in locals().items():
             try:                
@@ -450,26 +377,8 @@ def twoGraphs(S1):
     plt.title('System Energy vs Time')
     plt.legend(['Kinetic', 'Potential', 'Total'], loc='best')
 
-
-
-#Xp_func = sym.lambdify((Yc, thS),Xproj.subs(constants), 'numpy')
-#Yp_func = sym.lambdify((Yc, thS),Yproj.subs(constants), 'numpy')
-#
-#projPos_func = sym.lambdify((Yc, thS),projPos.subs(constants), 'numpy')
-#
-#thA_func = sym.lambdify(Yc, theta_arm.subs(constants), 'numpy')
-#
-#ycA = np.array(yc)
-#thsA = np.array(ths)
-#ycdA = np.array(ycd)
-#thsdA = np.array(thsd)
-#
-#X = Xp_func(ycA, thsA)
-#Y = Yp_func(ycA, thsA)
-#
-#T_array = T_func(ycA, ycdA, thsA, thsdA)
-#V_array = V_func(ycA, thsA)
-
-if __name__ == '__main__':    
-    S1 = Simulator()
-    print('End Range:', S1.endRange((2.9,3.2)))
+#if __name__ == '__main__':    
+#    S1 = Simulator()
+#    print('End Range:', S1.endRange((2.9,3.2)))
+#    calcData(S1)
+#    twoGraphs(S1)
