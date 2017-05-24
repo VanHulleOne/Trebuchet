@@ -60,8 +60,83 @@ class Simulator:
         self.createGroundLagrangian()
         self.la = None
         self.ls = None
-        self.endRange((la_init, ls_init))
+#        self.endRange((la_init, ls_init))
         #self.printFuncs()
+
+#    def createGroundLagrangian(self):
+#        print('Create Ground Lagrangian')
+#        
+#        Ma = Ma_perMeter*la
+#        Ia = Ma*la**2/3
+#        
+#        Xcam = -CWdrop/2 - r_cam - space
+#        Ycam = r_cam - r_cam # To make a symbolic zero
+#        
+#        Xpb = -CWdrop/2 + Yc**2/4
+#        Ypb = Yc/2
+#        
+#        theta_arm = theta_Ai - (sym.sqrt((Xcam - Xpb)**2 + (Ycam - Ypb)**2) - r_cam - space)/r_cam
+#        
+#        armTipPos = la*sym.Matrix([sym.cos(theta_arm), sym.sin(theta_arm)])
+#        armTipPosX = armTipPos[X]
+#        armTipPosY = armTipPos[Y]
+#        
+#        thS = -sym.asin(la*(1+sym.sin(theta_arm))/ls)
+#        thSd = sym.diff(thS,t)
+#        thSdd = sym.diff(thS,t,t)
+#        
+#        Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
+#        Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
+#        
+#        projPos = sym.Matrix([Xproj, Yproj])
+#        
+#        projVel = projPos.diff(t)
+#        projVelX = projVel[X]
+#        projVelY = projVel[Y]
+#        projAcc = projPos.diff(t, t)
+#        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
+#        slingTensionY = -slingTension*sym.sin(thS)
+#        projSpeedSq = projVel[0]**2 + projVel[1]**2
+#        
+#        """
+#        L = T-V
+#        where:
+#        T = Kenetic Energy
+#        V = Potential Energy
+#        """
+#        
+#        V_c = Mc*-g*(Yc+CWdrop)
+#        V_armcg = Ma*-g*armTipPos[Y]/2
+#        V_p = Mp*-g*Yproj
+#        V = V_c+V_armcg+V_p
+#        
+#        T_c = Mc*Ycd**2/2
+#        T_a = Ia*sym.diff(theta_arm,t)**2/2
+#        T_p = Mp*projSpeedSq/2
+#        T = T_c+T_a+T_p
+#        
+#        L = T - V
+#        
+#        LM = mech.LagrangesMethod(L, (Yc,))
+#        
+#        LM.form_lagranges_equations()
+#        print('Solve for acc')
+#        acc = LM.rhs()
+#        Ycdd = acc[1]
+#        print('Solved')
+#        for key, value in locals().items():
+#            if key == 'thSdd' or key == 'slingTensionY':
+#                ycdd = sym.diff(Yc,t,t)
+#                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'l_a', 'l_s')
+#                tD = [Yc, Ycd, ycdd, thS, thSd]
+#                self.ground_functions[key] = lambdify_helper(tD, value, n)
+#                self.ground_symbolicEquations[key] = value
+#                continue
+#            try:                
+#                self.ground_functions[key] = lambdify_helper(timeDependent, value, names)
+#                self.ground_symbolicEquations[key] = value
+#            except Exception as e:
+#                print('Key:', key)        
 
     def createGroundLagrangian(self):
         print('Create Ground Lagrangian')
@@ -80,10 +155,6 @@ class Simulator:
         armTipPos = la*sym.Matrix([sym.cos(theta_arm), sym.sin(theta_arm)])
         armTipPosX = armTipPos[X]
         armTipPosY = armTipPos[Y]
-        
-        thS = -sym.asin(la*(1+sym.sin(theta_arm))/ls)
-        thSd = sym.diff(thS,t)
-        thSdd = sym.diff(thS,t,t)
         
         Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
         Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
@@ -117,18 +188,24 @@ class Simulator:
         
         L = T - V
         
-        LM = mech.LagrangesMethod(L, (Yc,))
+        LM = mech.LagrangesMethod(L, (Yc, thS), hol_coneqs=[Yproj])#, forcelist=[Ycd*0.1,])
         
         LM.form_lagranges_equations()
         print('Solve for acc')
         acc = LM.rhs()
-        Ycdd = acc[1]
+        Ycdd = acc[2]
+        thSdd = acc[3]
+#        self.symbolicEquations['Ycdd'] = acc[2]
+#        self.symbolicEquations['thSdd'] = acc[3]
+#        self.functions['Ycdd'] = lambdify_helper(timeDependent, acc[2], names)
+#        self.functions['thSdd'] = lambdify_helper(timeDependent, acc[3], names)
         print('Solved')
         for key, value in locals().items():
-            if key == 'thSdd' or key == 'slingTensionY':
+            if key == 'slingTensionY':
                 ycdd = sym.diff(Yc,t,t)
-                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'l_a', 'l_s')
-                tD = [Yc, Ycd, ycdd, thS, thSd]
+                thSdd = sym.diff(thS,t,t)
+                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'thSddt', 'l_a', 'l_s')
+                tD = [Yc, Ycd, ycdd, thS, thSd, thSdd]
                 self.ground_functions[key] = lambdify_helper(tD, value, n)
                 self.ground_symbolicEquations[key] = value
                 continue
@@ -136,7 +213,7 @@ class Simulator:
                 self.ground_functions[key] = lambdify_helper(timeDependent, value, names)
                 self.ground_symbolicEquations[key] = value
             except Exception as e:
-                print('Key:', key)        
+                print('Key:', key)
 
     def createLagrangian(self):
         print('Create Lagrangian')
@@ -255,16 +332,10 @@ class Simulator:
             yd = ycd[-1]
             th = ths[-1]
             thd = thsd[-1]
-            #ycdd = functions['Ycdd'](y, yd, th, thd, la, ls)
-            if switched:
-                ycdd = tf.ycdd(y, yd, th, thd, la, ls)
-                thsdd = tf.thSdd(y, yd, th, thd, la, ls)
-                #thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
-            else:
-                ycdd = tf.g_ycdd(y, yd, th, thd, la, ls)
-                thsdd = functions['thSdd'](y, yd, ycdd, th, thd, la, ls)
-                
-                slingTensionY = functions['slingTensionY'](y, yd, ycdd, th, thd, la, ls)
+            ycdd = functions['Ycdd'](y, yd, th, thd, la, ls)
+            thsdd = functions['thSdd'](y, yd, th, thd, la, ls)
+            if not switched:                
+                slingTensionY = functions['slingTensionY'](y, yd, ycdd, th, thd, thsdd, la, ls)
                 armTipPosY = functions['armTipPosY'](y, yd, th, thd, la, ls)
                 
                 if (slingTensionY > -constants[g]*constants[Mp]
@@ -361,9 +432,26 @@ def printFunc(func):
     funcStr = lambdastr(dummy_timedependent, func)
     funcStr = funcStr.replace('**', '^')
     print(funcStr)
+
+def twoGraphs(S1):
+    totalEnergy = S1.T + S1.V
+    time = S1.time_array
+    plt.figure(1)
+    plt.plot(S1.projPos[X],S1.projPos[Y])
+    plt.axis('equal')
+    plt.xlabel('X position [m]')
+    plt.ylabel('Y position [m]')
+    plt.title('X-Y Position Projectile')
     
-S1 = Simulator()
-#S1.endRange((2.9,3.2))
+    plt.figure(2)
+    plt.plot(time, S1.T, 'r', time, S1.V, 'g', time, totalEnergy, 'b')
+    plt.xlabel('Time [sec]')
+    plt.ylabel('Energy [Joules]')
+    plt.title('System Energy vs Time')
+    plt.legend(['Kinetic', 'Potential', 'Total'], loc='best')
+
+
+
 #Xp_func = sym.lambdify((Yc, thS),Xproj.subs(constants), 'numpy')
 #Yp_func = sym.lambdify((Yc, thS),Yproj.subs(constants), 'numpy')
 #
@@ -381,20 +469,7 @@ S1 = Simulator()
 #
 #T_array = T_func(ycA, ycdA, thsA, thsdA)
 #V_array = V_func(ycA, thsA)
-#
-#totalEnergy = T_array + V_array
-#
-#plt.figure(1)
-#plt.plot(X,Y)
-#plt.axis('equal')
-#plt.xlabel('X position [m]')
-#plt.ylabel('Y position [m]')
-#plt.title('X-Y Position Projectile')
-#
-#plt.figure(2)
-#plt.plot(time, T_array, 'r', time, V_array, 'g', time, totalEnergy, 'b')
-#plt.xlabel('Time [sec]')
-#plt.ylabel('Energy [Joules]')
-#plt.title('System Energy vs Time')
-#plt.legend(['Kinetic', 'Potential', 'Total'], loc='best')
 
+if __name__ == '__main__':    
+    S1 = Simulator()
+    print('End Range:', S1.endRange((2.9,3.2)))

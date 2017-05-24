@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import animation
 import fiffer
-from fiffer import Simulator
+#from fiffer import Simulator
 
 X,Y = 0,1
 
