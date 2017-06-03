@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Apr 30 08:58:40 2017
+from math import cos, sin, sqrt
+from numba import jit, vectorize, float64, int64
 
-@author: Myself
-"""
+@vectorize([float64(float64,float64,float64,float64,float64,float64,float64,float64,)], nopython=True, cache=True)
+def gVect(Yct, Ycdt, Ycddt, thSt, thSdt, thSddt, l_arm, l_sling, ):
+	return -4.5*sqrt((0.189035916824197*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2) + 0.869565217391304*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2)**(3/2) - 0.434782608695652*l_arm*(Ycddt*Yct*(Yct**2 + 6.6) + 2*Ycddt*Yct + 2*Ycdt**2*Yct**2 + Ycdt**2*(Yct**2 + 6.6) + 2*Ycdt**2)*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - l_sling*thSddt*sin(thSt) - l_sling*thSdt**2*cos(thSt))**2 + (0.189035916824197*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2) - 0.869565217391304*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2)**(3/2) + 0.434782608695652*l_arm*(Ycddt*Yct*(Yct**2 + 6.6) + 2*Ycddt*Yct + 2*Ycdt**2*Yct**2 + Ycdt**2*(Yct**2 + 6.6) + 2*Ycdt**2)*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) + l_sling*thSddt*cos(thSt) - l_sling*thSdt**2*sin(thSt))**2)*sin(thSt)
 
-import numpy as np
+@jit(float64(float64,float64,float64,float64,float64,float64,float64,float64,), nopython=True, cache=True)
+def gJIT(Yct, Ycdt, Ycddt, thSt, thSdt, thSddt, l_arm, l_sling, ):
+	return -4.5*sqrt((0.189035916824197*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2) + 0.869565217391304*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2)**(3/2) - 0.434782608695652*l_arm*(Ycddt*Yct*(Yct**2 + 6.6) + 2*Ycddt*Yct + 2*Ycdt**2*Yct**2 + Ycdt**2*(Yct**2 + 6.6) + 2*Ycdt**2)*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - l_sling*thSddt*sin(thSt) - l_sling*thSdt**2*cos(thSt))**2 + (0.189035916824197*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*cos(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2) - 0.869565217391304*Ycdt**2*Yct**2*l_arm*(Yct**2 + 8.6)**2*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/(4*Yct**2 + (Yct**2 + 6.6)**2)**(3/2) + 0.434782608695652*l_arm*(Ycddt*Yct*(Yct**2 + 6.6) + 2*Ycddt*Yct + 2*Ycdt**2*Yct**2 + Ycdt**2*(Yct**2 + 6.6) + 2*Ycdt**2)*sin(0.217391304347826*sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) - 1.43478260869565)/sqrt(4*Yct**2 + (Yct**2 + 6.6)**2) + l_sling*thSddt*cos(thSt) - l_sling*thSdt**2*sin(thSt))**2)*sin(thSt)
 
-aref = np.array([1,0])
-for angle in range(0,314,10):
-    angle /= 100
-    atarg = np.array([np.cos(angle), np.sin(angle)])
-    costheta = np.dot(aref, atarg)
-    deg = np.arccos(costheta)/(2*np.pi)*360
-    print('Atarg:', atarg, 'Cos_theta:', costheta, 'Angle:', deg)
+@vectorize([int64(int64, int64)])
+def f(x, y):
+    return x + y

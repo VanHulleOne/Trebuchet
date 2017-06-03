@@ -18,7 +18,9 @@ from scipy import optimize
 
 sym.init_printing()
 
-X, Y = 0, 1 # For matrix indexes
+X, Y = 0, 1 # For matrix index
+VECTORIZE = 'vectorize'
+JIT = 'jit'
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
@@ -44,12 +46,31 @@ names = ('Yct', 'Ycdt', 'thSt', 'thSdt', 'l_a', 'l_s')
 
 timeSubsDict = {a:b for a,b in zip(timeDependent, dummy_timedependent)}
 
-def makeJIT(func):
+#@jit(float32(float32,float32,float32,float32,float32,float32,), nopython=True, cache=True)
+#def g_ycdd(Yct, Ycdt, thSt, thSdt, l_a, l_s):
+
+def numbify(func, name, _type):
+    func, args = subFunc(func)
+    signature = 'float64(' + 'float64,'*len(args) +')'
+    if _type == JIT:
+        lines = ['@jit(' + signature + ', ']
+    elif _type == VECTORIZE:
+        lines = ['@vectorize([' + signature + '], ']
+    lines.append('nopython=True, cache=True)\n')
+    lines.append('def ' + name + '(')
+    lines.extend(str(s) + ', ' for s in args)
+    lines.append('):\n')
+    lines.append('\treturn ')
+    lines.append(str(func))
+    return ''.join(lines)
+        
+    
+def subFunc(func):
     func = func.subs(timeSubsDict)
     funcSet = set(sym.preorder_traversal(func))
     args = [arg for arg in dummy_timedependent + timeIndepArgs if arg in funcSet]
     func = func.subs(constants)
-    return str(func)
+    return func, args
         
 
 def lambdify_helper(variables, func, names=None, subConsts=True):
@@ -352,6 +373,16 @@ def calcData(self):
         self.T[_slice] = funcs['T'](*data)
         self.V[_slice] = funcs['V'](*data)
 
+
+def writeFunc(func):
+    with open('test1.py', 'w') as f:
+        f.write('from math import cos, sin, sqrt\n')
+        f.write('from numba import jit, vectorize, float64\n')
+        f.write('\n')
+        f.write(numbify(func, 'gVect', VECTORIZE))
+        f.write('\n')
+        f.write(numbify(func, 'gVect', JIT))
+        
     
 def printFunc(func):
     func = func.subs({a:b for a,b in zip(timeDependent, dummy_timedependent)})
