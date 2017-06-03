@@ -88,6 +88,7 @@ class Simulator:
         self.accelerations = {}
         self.distances = []
         self.createLagrangian()
+        self.formAccelerations()
         self.la = None
         self.ls = None 
         
@@ -99,16 +100,16 @@ class Simulator:
         LM.form_lagranges_equations()
         print('Solve for ground acc')
         acc = LM.rhs()
-        self.accelterations['Ycdd_g'] = acc[2]
-        self.accelterations['thSdd_g'] = acc[3]
+        self.accelerations['Ycdd_g'] = acc[2]
+        self.accelerations['thSdd_g'] = acc[3]
         
         LM = mech.LagrangesMethod(self.symbolicEquations['L'], (Yc, thS))
         
         LM.form_lagranges_equations()
         print('Solve for general acc')
         acc = LM.rhs()
-        self.accelterations['Ycdd'] = acc[2]
-        self.accelterations['thSdd'] = acc[3]
+        self.accelerations['Ycdd'] = acc[2]
+        self.accelerations['thSdd'] = acc[3]
 
     def createLagrangian(self):
         print('Create Lagrangian')
@@ -162,6 +163,8 @@ class Simulator:
         L = T - V
         
         for key, value in locals().items():
+            if value is self:
+                continue
             self.symbolicEquations[key] = value
 
     def printFuncs(self, eq_Dict=None):
@@ -306,12 +309,20 @@ def calcData(self):
 
 def writeFunc(sim):
     with open('test1.py', 'w') as f:
-        f.write('from math import cos, sin, sqrt\n')
+        f.write('from math import cos, sin, sqrt, pi\n')
         f.write('from numba import jit, vectorize, float64\n')
         f.write('\n')
-        f.write(numbify(func, 'gVect', VECTORIZE))
-        f.write('\n')
-        f.write(numbify(func, 'gVect', JIT))
+        for name, func in sim.symbolicEquations.items():
+            print(name)
+            try:
+                f.write(numbify(func, name, VECTORIZE))
+            except Exception:
+                f.write(numbify(func[X], name + 'X', VECTORIZE))
+                f.write(numbify(func[Y], name + 'Y', VECTORIZE))
+        
+        for name, func in sim.accelerations.items():
+            print(name)
+            f.write(numbify(func, name, JIT))
         
     
 def printFunc(func):
