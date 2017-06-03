@@ -61,7 +61,7 @@ def numbify(func, name, _type):
     lines.extend(str(s) + ', ' for s in args)
     lines.append('):\n')
     lines.append('\treturn ')
-    lines.append(str(func))
+    lines.append(str(func)+'\n\n')
     return ''.join(lines)
         
     
@@ -85,87 +85,30 @@ def lambdify_helper(variables, func, names=None, subConsts=True):
 class Simulator:
     def __init__(self):
         self.symbolicEquations = {}
-        self.functions = {}
-        self.ground_symbolicEquations = {}
-        self.ground_functions = {}
+        self.accelerations = {}
         self.distances = []
         self.createLagrangian()
-        self.createGroundLagrangian()
         self.la = None
-        self.ls = None      
-
-    def createGroundLagrangian(self):
-        print('Create Ground Lagrangian')
+        self.ls = None 
         
-        Ma = Ma_perMeter*la
-        Ia = Ma*la**2/3
-        
-        Xcam = -CWdrop/2 - r_cam - space
-        Ycam = r_cam - r_cam # To make a symbolic zero
-        
-        Xpb = -CWdrop/2 + Yc**2/4
-        Ypb = Yc/2
-        
-        theta_arm = theta_Ai - (sym.sqrt((Xcam - Xpb)**2 + (Ycam - Ypb)**2) - r_cam - space)/r_cam
-        
-        armTipPos = la*sym.Matrix([sym.cos(theta_arm), sym.sin(theta_arm)])
-        armTipPosX = armTipPos[X]
-        armTipPosY = armTipPos[Y]
-        
-        Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
-        Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
-        
-        projPos = sym.Matrix([Xproj, Yproj])
-        
-        projVel = projPos.diff(t)
-        projVelX = projVel[X]
-        projVelY = projVel[Y]
-        projAcc = projPos.diff(t, t)
-        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
-        slingTensionY = -slingTension*sym.sin(thS)
-        projSpeedSq = projVel[0]**2 + projVel[1]**2
-        
-        """
-        L = T-V
-        where:
-        T = Kenetic Energy
-        V = Potential Energy
-        """
-        
-        V_c = Mc*-g*(Yc+CWdrop)
-        V_armcg = Ma*-g*armTipPos[Y]/2
-        V_p = Mp*-g*Yproj
-        V = V_c+V_armcg+V_p
-        
-        T_c = Mc*Ycd**2/2
-        T_a = Ia*sym.diff(theta_arm,t)**2/2
-        T_p = Mp*projSpeedSq/2
-        T = T_c+T_a+T_p
-        
-        L = T - V
-        
-        LM = mech.LagrangesMethod(L, (Yc, thS), hol_coneqs=[Yproj])
+    def formAccelerations(self):
+        LM = mech.LagrangesMethod(self.symbolicEquations['L'],
+                                  (Yc, thS),
+                                  hol_coneqs=[self.symbolicEquations['projPos'][Y]])
         
         LM.form_lagranges_equations()
-        print('Solve for acc')
+        print('Solve for ground acc')
         acc = LM.rhs()
-        Ycdd = acc[2]
-        thSdd = acc[3]
-        print('Solved')
-        for key, value in locals().items():
-            if key == 'slingTensionY' or key == 'projAcc':
-                ycdd = sym.diff(Yc,t,t)
-                thSdd = sym.diff(thS,t,t)
-                n = ('Yct', 'Ycdt', 'Ycddt', 'thSt', 'thSdt', 'thSddt', 'l_a', 'l_s')
-                tD = [Yc, Ycd, ycdd, thS, thSd, thSdd]
-                self.ground_functions[key] = lambdify_helper(tD, value, n)
-                self.ground_symbolicEquations[key] = value
-                continue
-            try:                
-                self.ground_functions[key] = lambdify_helper(timeDependent, value, names)
-                self.ground_symbolicEquations[key] = value
-            except Exception as e:
-                print('Key:', key)
+        self.accelterations['Ycdd_g'] = acc[2]
+        self.accelterations['thSdd_g'] = acc[3]
+        
+        LM = mech.LagrangesMethod(self.symbolicEquations['L'], (Yc, thS))
+        
+        LM.form_lagranges_equations()
+        print('Solve for general acc')
+        acc = LM.rhs()
+        self.accelterations['Ycdd'] = acc[2]
+        self.accelterations['thSdd'] = acc[3]
 
     def createLagrangian(self):
         print('Create Lagrangian')
@@ -182,20 +125,21 @@ class Simulator:
         theta_arm = theta_Ai - (sym.sqrt((Xcam - Xpb)**2 + (Ycam - Ypb)**2) - r_cam - space)/r_cam
         
         armTipPos = la*sym.Matrix([sym.cos(theta_arm), sym.sin(theta_arm)])
-        armTipPosX = armTipPos[X]
-        armTipPosY = armTipPos[Y]
+#        armTipPosX = armTipPos[X]
+#        armTipPosY = armTipPos[Y]
         
-        Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
-        Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
+#        Xproj = la*sym.cos(theta_arm) + ls*sym.cos(thS)
+#        Yproj = la*sym.sin(theta_arm) + ls*sym.sin(thS)
         
-        projPos = sym.Matrix([Xproj, Yproj])
+        projPos = sym.Matrix([la*sym.cos(theta_arm) + ls*sym.cos(thS),
+                              la*sym.sin(theta_arm) + ls*sym.sin(thS)])
         
         projVel = projPos.diff(t)
-        projVelX = projVel[X]
-        projVelY = projVel[Y]
+#        projVelX = projVel[X]
+#        projVelY = projVel[Y]
         projAcc = projPos.diff(t, t)
-        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
-        slingTensionY = -slingTension*sym.sin(thS)
+#        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
+#        slingTensionY = -slingTension*sym.sin(thS)
         projSpeedSq = projVel[0]**2 + projVel[1]**2
         
         """
@@ -207,7 +151,7 @@ class Simulator:
         
         V_c = Mc*-g*(Yc+CWdrop)
         V_armcg = Ma*-g*armTipPos[Y]/2
-        V_p = Mp*-g*Yproj
+        V_p = Mp*-g*projPos[Y]
         V = V_c+V_armcg+V_p
         
         T_c = Mc*Ycd**2/2
@@ -217,22 +161,8 @@ class Simulator:
         
         L = T - V
         
-        LM = mech.LagrangesMethod(L, (Yc, thS))
-        
-        LM.form_lagranges_equations()
-        print('Solve for acc')
-        acc = LM.rhs()
-        Ycdd = acc[2]
-        thSdd = acc[3]
-        print('Solved')
         for key, value in locals().items():
-            try:                
-                self.functions[key] = lambdify_helper(timeDependent, value, names)
-                self.symbolicEquations[key] = value
-            except Exception as e:
-                print('Key:', key)
-#                print(e)
-#                break
+            self.symbolicEquations[key] = value
 
     def printFuncs(self, eq_Dict=None):
         if eq_Dict is None:
@@ -374,7 +304,7 @@ def calcData(self):
         self.V[_slice] = funcs['V'](*data)
 
 
-def writeFunc(func):
+def writeFunc(sim):
     with open('test1.py', 'w') as f:
         f.write('from math import cos, sin, sqrt\n')
         f.write('from numba import jit, vectorize, float64\n')
