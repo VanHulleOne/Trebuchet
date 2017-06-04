@@ -9,6 +9,7 @@ Created on Thu Apr 20 08:34:51 2017
 from collections import namedtuple as nt
 import sympy as sym
 from sympy.physics import mechanics as mech
+import matplotlib.pyplot as plt
 import numpy as np
 
 from scipy import optimize
@@ -20,7 +21,12 @@ sym.init_printing()
 X, Y = 0, 1
 JIT, VECTORIZE = 0, 1
 
-Arrays = nt('Arrays', 'Yc Ycd Ycdd thS thSd thSdd time')
+Data = nt('Data', 'Yc Ycd Ycdd thS thSd thSdd time l_arm l_sling')
+data = Data._make([None]*9)
+
+#dataVarMap = {'Yct': data.Yc, 'Ycdt': data.Ycd, 'Ycddt': data.Ycdd,
+#              'thSt': data.thS, 'thSdt': data.thSd, 'thSddt': data.thSdd,
+#              'time': data.time, 'l_arm': data.la, 'l_sling':data.ls}
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
@@ -40,7 +46,7 @@ thSdd = sym.diff(thS,t,t)
 timeDependent = [Yc, Ycd, Ycdd, thS, thSd, thSdd]
 timeIndepArgs = (la, ls)
 
-Yct, Ycdt, Ycddt, thSt, thSdt, thSddt = sym.symbols('Yct, Ycdt, Ycddt, thSt, thSdt, thSddt')
+Yct, Ycdt, Ycddt, thSt, thSdt, thSddt = sym.symbols('Yc, Ycd, Ycdd, thS, thSd, thSdd')
 dummy_timedependent = (Yct, Ycdt, Ycddt, thSt, thSdt, thSddt)
 
 timeSubsDict = {a:b for a,b in zip(timeDependent, dummy_timedependent)}
@@ -66,19 +72,55 @@ def subFunc(func):
     funcSet = set(sym.preorder_traversal(func))
     args = [arg for arg in dummy_timedependent + timeIndepArgs if arg in funcSet]
     func = func.subs(constants)
-    return func, args
+    return func, args    
 
 class EquationBuilder:
     def __init__(self):
         self.symbolicEquations = {}
         self.accelerations = {}
+        self.funcArgsMap = {}
         self.createLagrangian()
         self.formAccelerations()
+        self.buildFuncArgMap()
+        
+    def __getattr__(self, attr):
+        cls = type(self)
+        if attr in self.funcArgsMap:
+            return getattr(feq, attr)(*[getattr(data, arg) for arg in self.funcArgsMap[attr]])
+        
+        msg = '{.__name__!r} object has no attribute {!r}'
+        raise AttributeError(msg.format(cls, attr))
+        
+    def plotter(self, *args, xAxis='time', ylabel=None, title=None):
+        if ylabel is None:
+            ylabel = ', '.join(args)
+        if title is None:
+            title = ylabel + ' vs ' + xAxis
+        if xAxis == 'time':
+            xData = data.time
+        else:
+            xData = getattr(self, xAxis)
+        plt.figure(1)
+        for arg in args:
+            try:
+                yData = getattr(self, arg)
+            except Exception:
+                yData = getattr(data, arg)
+            plt.plot(xData, yData)
+        plt.xlabel(xAxis)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend([arg for arg in args], loc='best')
+    
+    def buildFuncArgMap(self):
+        for name, func in self.symbolicEquations.items():
+            _, args = subFunc(func)
+            self.funcArgsMap[name] = [str(arg) for arg in args]
         
     def formAccelerations(self):
         LM = mech.LagrangesMethod(self.symbolicEquations['L'],
                                   (Yc, thS),
-                                  hol_coneqs=[self.symbolicEquations['projPos'][Y]])
+                                  hol_coneqs=[self.symbolicEquations['projPosY']])
         
         LM.form_lagranges_equations()
         print('Solve for ground acc')
@@ -135,15 +177,21 @@ class EquationBuilder:
         T_p = Mp*projSpeedSq/2
         T = T_c+T_a+T_p
         
+        totalEnergy = T + V
+        
         L = T - V
         
         for key, value in locals().items():
             if value is self:
                 continue
-            self.symbolicEquations[key] = value
+            try:
+                self.symbolicEquations[key+'X'] = value[X]
+                self.symbolicEquations[key+'Y'] = value[Y]
+            except Exception:
+                self.symbolicEquations[key] = value
             
 #@profile       
-def endRange(la, ls=None, returnArrays=False):
+def endRange(la, ls=None, setData=False):
     if ls is None:
         la, ls = la
     dt = 0.001
@@ -164,7 +212,7 @@ def endRange(la, ls=None, returnArrays=False):
     
     Ycdd_func = feq.Ycdd_g
     thSdd_func = feq.thSdd_g
-    switched = False
+    liftoff = False
     i = 0
     while(i < maxSteps and yc_array[i] > endHeight):
         time_array[i] = i*dt
@@ -182,7 +230,7 @@ def endRange(la, ls=None, returnArrays=False):
         ycdd = Ycdd_func(yc, ycd, thS, thSd, la, ls)
         thSdd = thSdd_func(yc, ycd, thS, thSd, la, ls)
         
-        if not switched:
+        if not liftoff:
             projAccY = feq.projAccY(yc, ycd, ycdd, thS, thSd, thSdd, la, ls)               
             armTipPosY = feq.armTipPosY(yc, la)
             
@@ -194,7 +242,7 @@ def endRange(la, ls=None, returnArrays=False):
                 """
                 Ycdd_func = feq.Ycdd
                 thSdd_func = feq.thSdd
-                switched = True
+                liftoff = True
         
         ycdd_array[i] = ycdd
         thsdd_array[i] = thSdd
@@ -228,8 +276,9 @@ def endRange(la, ls=None, returnArrays=False):
     hangTime = (-projVelY - (projVelY**2 - 4*1*-9.8/2)**0.5)/(-9.8)
     dist = -projVelX*hangTime
     #projSpeed = np.sqrt(projVelY**2 + projVelX**2)
-    if returnArrays:
-        return dist, Arrays._make(np.array(a[:i-1]) for a in arrays)
+    if setData:
+        global data
+        data = Data._make([np.array(a[:i-1]) for a in arrays] + [la, ls])
     return dist
 
 
@@ -237,7 +286,8 @@ def endRange(la, ls=None, returnArrays=False):
 def opti(la = la_init, ls = ls_init):
     # 'Nelder-Mead' 'TNC' bounds=((1,7),(1,10)),'Nelder-Mead'
     res = optimize.minimize(endRange, [la, ls], method = 'Powell', tol=0.1)
-    print(res)
+    endRange(*res.x, setData=True)
+    return res
 
 def writeFunc(eqBuilder, fileName = 'fifferequations.py'):
     with open(fileName, 'w') as f:
@@ -246,15 +296,13 @@ def writeFunc(eqBuilder, fileName = 'fifferequations.py'):
         f.write('\n')
         for name, func in eqBuilder.symbolicEquations.items():
             print(name)
-            try:
-                f.write(numbify(func, name, VECTORIZE))
-            except Exception:
-                f.write(numbify(func[X], name + 'X', VECTORIZE))
-                f.write(numbify(func[Y], name + 'Y', VECTORIZE))
+            f.write(numbify(func, name, VECTORIZE))
         
         for name, func in eqBuilder.accelerations.items():
             print(name)
             f.write(numbify(func, name, JIT))
 
 if __name__ == '__main__':
-    print(endRange(2.7,3.1))
+    #print(endRange(2.7,3.1, setData=True))
+    e1 = EquationBuilder()
+    opti()
