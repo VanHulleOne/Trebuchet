@@ -6,13 +6,10 @@ Created on Thu Apr 20 08:34:51 2017
 """
 
 # Fiffer Simulation
+from collections import namedtuple as nt
 import sympy as sym
 from sympy.physics import mechanics as mech
-from sympy.utilities.lambdify import lambdastr
 import numpy as np
-from numba import jit
-import matplotlib.pyplot as plt
-from collections import namedtuple
 
 from scipy import optimize
 
@@ -20,9 +17,10 @@ import fifferequations as feq
 
 sym.init_printing()
 
-X, Y = 0, 1 # For matrix index
-VECTORIZE = 'vectorize'
-JIT = 'jit'
+X, Y = 0, 1
+JIT, VECTORIZE = 0, 1
+
+Arrays = nt('Arrays', 'Yc Ycd Ycdd thS thSd thSdd time')
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
@@ -44,7 +42,6 @@ timeIndepArgs = (la, ls)
 
 Yct, Ycdt, Ycddt, thSt, thSdt, thSddt = sym.symbols('Yct, Ycdt, Ycddt, thSt, thSdt, thSddt')
 dummy_timedependent = (Yct, Ycdt, Ycddt, thSt, thSdt, thSddt)
-names = ('Yct', 'Ycdt', 'thSt', 'thSdt', 'l_a', 'l_s')
 
 timeSubsDict = {a:b for a,b in zip(timeDependent, dummy_timedependent)}
 
@@ -145,8 +142,8 @@ class EquationBuilder:
                 continue
             self.symbolicEquations[key] = value
             
-@profile       
-def endRange(la, ls=None):
+#@profile       
+def endRange(la, ls=None, returnArrays=False):
     if ls is None:
         la, ls = la
     dt = 0.001
@@ -160,6 +157,10 @@ def endRange(la, ls=None):
     thsd_array = np.zeros(maxSteps, dtype=np.float64)
     thsdd_array = np.zeros(maxSteps, dtype=np.float64)
     time_array = np.zeros(maxSteps, dtype=np.float64)
+    
+    arrays = (yc_array, ycd_array, ycdd_array,
+              ths_array, thsd_array, thsdd_array,
+              time_array)
     
     Ycdd_func = feq.Ycdd_g
     thSdd_func = feq.thSdd_g
@@ -205,34 +206,37 @@ def endRange(la, ls=None):
         
         ths_array[i] = thS + thSd*dt + 0.5*thSdd*dt**2
         thsd_array[i] = thSd + thSdd*dt
-#    else: # Excecuted if the break statement is not hit.
-#        '''
-#        If the sling is too long it will not come around fast enough and the
-#        while loop will exit because the CW has fallen all the way down. The
-#        real machine would continue running and possibly pull the CW back up a
-#        little before launching, but the simulation does not work that way so
-#        this is an attempt to handle that and smooth out the contour plot so the
-#        optimization can be more robust.
-#        '''
-#        cos45 = np.cos(np.pi/4)
-#        ideal = np.array([cos45, cos45])
-#        actual = np.array([projVelX, projVelY])
-#        velMagnitude = np.linalg.norm(actual)
-#        cosTheta = (np.dot(ideal, actual)/velMagnitude+1)/2
-#        projVelX, projVelY = ideal*velMagnitude*cosTheta
+    else: # Excecuted if the break statement is not hit.
+        '''
+        If the sling is too long it will not come around fast enough and the
+        while loop will exit because the CW has fallen all the way down. The
+        real machine would continue running and possibly pull the CW back up a
+        little before launching, but the simulation does not work that way so
+        this is an attempt to handle that and smooth out the contour plot so the
+        optimization can be more robust.
+        '''
+        cos45 = np.cos(np.pi/4)
+        ideal = np.array([cos45, cos45])
+        actual = np.array([projVelX, projVelY])
+        velMagnitude = np.linalg.norm(actual)
+        cosTheta = (np.dot(ideal, actual)/velMagnitude+1)/2
+        projVelX, projVelY = ideal*velMagnitude*cosTheta
     
     
     # s = xi + vi*t + 1.2at^2
     # 0 = g/2*t^2 + vi*t + xi
     hangTime = (-projVelY - (projVelY**2 - 4*1*-9.8/2)**0.5)/(-9.8)
     dist = -projVelX*hangTime
+    #projSpeed = np.sqrt(projVelY**2 + projVelX**2)
+    if returnArrays:
+        return dist, Arrays._make(np.array(a[:i-1]) for a in arrays)
     return dist
 
 
     
-def opti(self, la = la_init, ls = ls_init):
-    # 'Nelder-Mead' 'TNC' bounds=((1,7),(1,10)),
-    res = optimize.minimize(self.endRange, [la, ls], method = 'Nelder-Mead',  tol=1.0)
+def opti(la = la_init, ls = ls_init):
+    # 'Nelder-Mead' 'TNC' bounds=((1,7),(1,10)),'Nelder-Mead'
+    res = optimize.minimize(endRange, [la, ls], method = 'Powell', tol=0.1)
     print(res)
 
 def writeFunc(eqBuilder, fileName = 'fifferequations.py'):
