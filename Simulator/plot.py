@@ -5,24 +5,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 
-from fiffer import Simulator
-
-def twoGraphs(S1):
-    totalEnergy = S1.T + S1.V
-    time = S1.time_array
-    plt.figure(1)
-    plt.plot(S1.projPos[X],S1.projPos[Y])
-    plt.axis('equal')
-    plt.xlabel('X position [m]')
-    plt.ylabel('Y position [m]')
-    plt.title('X-Y Position Projectile')
-    
-    plt.figure(2)
-    plt.plot(time, S1.T, 'r', time, S1.V, 'g', time, totalEnergy, 'b')
-    plt.xlabel('Time [sec]')
-    plt.ylabel('Energy [Joules]')
-    plt.title('System Energy vs Time')
-    plt.legend(['Kinetic', 'Potential', 'Total'], loc='best')
+import fiffer
 
 #S1 = Simulator()
 
@@ -35,7 +18,7 @@ print('Total:', len(Z))
 i = 0
 for y in Y:
     for x in X:
-        Z[i] = -S1.endRange([x,y])
+        Z[i] = -fiffer.endRange([x,y])
         if i%100 == 0:
             print(i)
         i += 1
