@@ -24,10 +24,6 @@ JIT, VECTORIZE = 0, 1
 Data = nt('Data', 'Yc Ycd Ycdd thS thSd thSdd time l_arm l_sling')
 data = Data._make([None]*9)
 
-#dataVarMap = {'Yct': data.Yc, 'Ycdt': data.Ycd, 'Ycddt': data.Ycdd,
-#              'thSt': data.thS, 'thSdt': data.thSd, 'thSddt': data.thSdd,
-#              'time': data.time, 'l_arm': data.la, 'l_sling':data.ls}
-
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
 la_init = 2.9
