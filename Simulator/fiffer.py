@@ -156,6 +156,9 @@ class EquationBuilder:
 
         projSpeedSq = projVel[0]**2 + projVel[1]**2
         
+        slingTension = sym.sqrt(projAcc[0]**2 + projAcc[1]**2)*Mp
+        slingTensionY = -slingTension*sym.sin(thS)
+        
         """
         L = T-V
         where:
@@ -227,10 +230,11 @@ def endRange(la, ls=None, setData=False):
         thSdd = thSdd_func(yc, ycd, thS, thSd, la, ls)
         
         if not liftoff:
-            projAccY = feq.projAccY(yc, ycd, ycdd, thS, thSd, thSdd, la, ls)               
+            #projAccY = feq.projAccY(yc, ycd, ycdd, thS, thSd, thSdd, la, ls)   
+            slingTensionY = feq.slingTensionY(yc, ycd, ycdd, thS, thSd, thSdd, la, ls)            
             armTipPosY = feq.armTipPosY(yc, la)
             
-            if (projAccY > 9.8 or la + armTipPosY >= ls):
+            if (slingTensionY > -constants[g]*constants[Mp] or la + armTipPosY >= ls):
                 """
                 If the upward acceleration is greater than gravity or
                 the arm tip is higher than the sling length the projectile will
@@ -301,4 +305,4 @@ def writeFunc(eqBuilder, fileName = 'fifferequations.py'):
 if __name__ == '__main__':
     #print(endRange(2.7,3.1, setData=True))
     e1 = EquationBuilder()
-    opti()
+    #opti()
