@@ -26,8 +26,8 @@ data = Data._make([None]*9)
 
 t, Mc, Mp, Ma, Ma_perMeter, Ia, CWdrop, la, ls, r_cam, theta_Ai, g, space = sym.symbols('t M_c M_p M_a Ma_perMeter I_a CW_drop l_arm l_sling r_cam theta_Ai g space')
 
-la_init = 2.9
-ls_init = 3.2
+la_init = 3.35
+ls_init = 3.65
 
 constants = {Mc:320, Mp:4.5, Ma_perMeter:12, CWdrop:3.66, r_cam:1.15,
              theta_Ai:-sym.pi/2, g:-9.8, space:0.5}
